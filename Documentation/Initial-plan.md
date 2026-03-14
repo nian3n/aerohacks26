@@ -12,8 +12,8 @@ Understanding the goal of the challenge is the most important part of the design
 
 ## Main tasks to implement
 1- Detect Drone using openCV
-2- implement stereo triangulation to add depth
-3- Kalman Filter
+2- Implement coversion from two 2D cameras to a 3D space
+3- Kalman Filter (not nessecary, great calibration to the envierment is more important)
 4- Use threading to optimise camera response and avoid reliance on other codeblocks
 5- implement mode 2 for better PID response 
 6- implement mode 3 

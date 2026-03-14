@@ -11,8 +11,9 @@ which will lead to increased drift
 
 import socket
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("192.168.4.1", 8080))
+if __name__ == "__main__":
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("192.168.4.1", 8080))
 
 def msg(tx):
     s.sendall((tx + "\n").encode("ASCII"))
@@ -55,7 +56,7 @@ def get_roll(): # unit close-ish to degrees, but not exact
 def get_gyro_pitch(): # pitch rate in degree/sec
     return float(msg("gyroX"))
 
-def get_gyro_pitch(): # roll rate in degree/sec
+def get_gyro_roll(): # roll rate in degree/sec
     return float(msg("gyroY"))
 
 # target pitch to aim for in mode 2
