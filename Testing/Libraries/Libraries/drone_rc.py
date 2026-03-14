@@ -9,110 +9,125 @@ which will lead to increased drift
 
 
 
-import socket
-import socket
-import time
 
-# ---- connection ----
+
+import socket
+
+
+def empty_socket(sock):
+    input_ready, _, _ = select.select([sock], [], [], 0.0)
+    while input_ready:
+        data = sock.recv(1)
+        if not data:
+            break
+        input_ready, _, _ = select.select([sock], [], [], 0.0)
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("192.168.4.1", 8080))
 
 def msg(tx):
+    empty_socket(s)
     s.sendall((tx + "\n").encode("ASCII"))
     rx = ""
     while not rx.endswith("\n"):
         rx += s.recv(1).decode("ASCII")
     return rx[:-1]
 
-def emergency_stop():   msg("mode0")
-def set_mode(m):        msg("mode" + str(m))
-def manual_thrusts(A,B,C,D): msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
-def get_pitch():        return float(msg("angX")) / 16
-def get_roll():         return float(msg("angY")) / 16
-def set_pitch(r):       msg("gx" + str(r))
-def set_roll(r):        msg("gy" + str(r))
-def set_p_gain(p):      msg("gainP" + str(p))
-def set_i_gain(i):      msg("gainI" + str(i))
-def set_d_gain(d):      msg("gainD" + str(d))
-def reset_integral():   msg("irst")
 
-#Using Z-N algorith to determine optimum PID gain
-def find_Ku(base_thrust=120, p_start=0.005, p_step=0.005, p_max=0.5):
-    """Slowly increases P until oscillation is detected. Watch the drone."""
-    set_mode(2)
-    set_i_gain(0)
-    set_d_gain(0)
-    set_pitch(0)
-    set_roll(0)
-    manual_thrusts(base_thrust, base_thrust, base_thrust, base_thrust)
+def emergency_stop():
+    msg("mode0")
 
-    P = p_start
-    while P <= p_max:
-        set_p_gain(P)
-        reset_integral()
-        print(f"P = {P:.4f} — watching for oscillation for 4s...")
-
-        crossings = []
-        last_sign = None
-        start = time.time()
-        while time.time() - start < 4.0:
-            error = get_pitch()
-            sign = 1 if error > 0 else -1
-            if last_sign is not None and sign != last_sign:
-                crossings.append(time.time())
-            last_sign = sign
-            time.sleep(0.05)
-
-        if len(crossings) >= 4:
-            periods = [crossings[i+2] - crossings[i] for i in range(len(crossings)-2)]
-            Tu = sum(periods) / len(periods)
-            print(f"\n✓ Oscillation detected!")
-            print(f"  Ku = {P:.4f}")
-            print(f"  Tu = {Tu:.3f} s")
-            print(f"\nNow call: apply_zn_gains(Ku={P:.4f}, Tu={Tu:.3f})")
-            emergency_stop()
-            return P, Tu
-
-        P = round(P + p_step, 4)
-        time.sleep(0.3)
-
-    print("No oscillation found — increase p_max")
+def e():
     emergency_stop()
 
+# mode 0: off
+# mode 1: full manual motor control
+# mode 2: PID control for pitch and roll
+def set_mode(m):
+    msg("mode" + str(m))
 
-def apply_zn_gains(Ku, Tu):
-    """Paste Ku and Tu from find_Ku() here."""
-    Kp = 0.6   * Ku
-    Ki = min(1.2 * Ku / Tu, 0.00003)  # clamped to firmware limit
-    Kd = 0.075 * Ku * Tu
+def get_mode():
+    return msg("gMode")
 
-    print(f"Applying gains — Kp={Kp:.5f}  Ki={Ki:.7f}  Kd={Kd:.5f}")
-    set_p_gain(Kp)
-    set_i_gain(Ki)
-    set_d_gain(Kd)
-    reset_integral()
-    return Kp, Ki, Kd
+# always between 0 and 250
+# in mode 2 sets baseline value in PID results are added to
+def manual_thrusts(A, B, C, D):
+    msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+
+# same as prev function, but increments last value instead of overwriting
+def increment_thrusts(A, B, C, D):
+    msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+
+def get_pitch(): # unit close-ish to degrees, but not exact
+    return float(msg("angX")) / 16
+
+def get_roll(): # unit close-ish to degrees, but not exact
+    return float(msg("angY")) / 16
+
+def get_gyro_pitch(): # pitch rate in degree/sec
+    return float(msg("gyroX"))
+
+def get_gyro_roll(): # roll rate in degree/sec
+    return float(msg("gyroY"))
+
+# target pitch to aim for in mode 2
+# same unit as get_pitch()
+def set_pitch(r):
+    msg("gx" + str(r))
+
+# target roll to aim for in mode 2
+# same unit as get_roll()
+def set_roll(r):
+    msg("gy" + str(r))
+
+def set_p_gain(p): # approx 0 - 0.5
+    msg("gainP" + str(p))
+
+def set_i_gain(i): # below 0.00003
+    msg("gainI" + str(i))
+
+def set_d_gain(d): # approx 0 - 10
+    msg("gainD" + str(d))
+
+def red_LED(val): # controls LED light. 1 for on, 0 for off
+    msg("lr" + str(val))
+
+def blue_LED(val):
+    msg("lb" + str(val))
+
+def green_LED(val):
+    msg("lg" + str(val))
+
+def reset_integral(): # resets the value of integrands in the PID loops to 0
+    msg("irst")
+
+# returns [I_x, I_y] the integrands from the pitch and roll pid loops
+def get_i_values():
+    resp = msg("geti").split(",")
+    return [float(resp[0]), float(resp[1])]
+
+def set_yaw(y): # directly sets motor difference for yaw control
+    msg("yaw" + str(y))
+
+def get_firmware_version():
+    return msg("vers")
 
 
-def fly(base_thrust=120, duration=10):
-    """Hovers for `duration` seconds using mode 2 (firmware PID)."""
-    set_mode(2)
-    set_pitch(0)
-    set_roll(0)
-    manual_thrusts(base_thrust, base_thrust, base_thrust, base_thrust)
-    reset_integral()
 
-    print(f"Flying for {duration}s — Ctrl+C to emergency stop")
-    try:
-        start = time.time()
-        while time.time() - start < duration:
-            p = get_pitch()
-            r = get_roll()
-            print(f"  pitch={p:+.2f}  roll={r:+.2f}")
-            time.sleep(0.5)  # low poll rate to not starve gyro
-    except KeyboardInterrupt:
-        print("Manual stop!")
-    finally:
-        emergency_stop()
-        print("Stopped.")
+
+
+
+
+
+# the following functions only work if firmware 1.2 or higher is installed on the drone
+# if you want to use this, please make sure by running msg("vers")
+
+# use at start of code if you want to use the drone outside of the cage. Overrides all mode changes
+def lock_props():
+    msg("lck")
+
+# recalibrates the gyroscope.
+# Do not communicate with the drone for 15 seconds after calling this
+def recalibrate():
+    msg("rst")
 
