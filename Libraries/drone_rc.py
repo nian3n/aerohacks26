@@ -13,6 +13,7 @@ which will lead to increased drift
 
 import socket
 
+<<<<<<< HEAD
 
 def empty_socket(sock):
     input_ready, _, _ = select.select([sock], [], [], 0.0)

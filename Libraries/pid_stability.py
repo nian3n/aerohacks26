@@ -16,6 +16,7 @@ import time
 import drone_rc as rc
 
 
+<<<<<<< HEAD
 # ─── Z-N AUTO TUNE ────────────────────────────────────────────────────────────
 
 def find_Ku(base_thrust=120, p_start=0.005, p_step=0.005, p_max=0.5):
@@ -120,3 +121,4 @@ def fly(base_thrust=120, duration=60):
     finally:
         rc.emergency_stop()
         print("Motors off.")
+

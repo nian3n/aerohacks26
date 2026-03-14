@@ -28,8 +28,8 @@ def detect_drone():
         contours, hierarchy = cv2.findContours(mask_dialated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # print(contours)
         frame_ct = cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-        min_contour_area = 7500 # Define your minimum area threshold
-        max_contour_area = 10000 
+        min_contour_area = 200  # Define your minimum area threshold
+        max_contour_area = 1000  
         large_contours = [cnt for cnt in contours if (cv2.contourArea(cnt) > min_contour_area and cv2.contourArea(cnt) < max_contour_area)]
         frame_out = frame.copy()
         for cnt in large_contours:
