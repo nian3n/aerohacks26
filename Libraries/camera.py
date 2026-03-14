@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 #open default 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 backSub = cv2.createBackgroundSubtractorMOG2(history=1000)
 
 if not cap.isOpened():
@@ -28,8 +28,8 @@ def detect_drone():
         contours, hierarchy = cv2.findContours(mask_dialated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # print(contours)
         frame_ct = cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-        min_contour_area = 15000  # Define your minimum area threshold
-        max_contour_area = 200000  
+        min_contour_area = 7500 # Define your minimum area threshold
+        max_contour_area = 10000 
         large_contours = [cnt for cnt in contours if (cv2.contourArea(cnt) > min_contour_area and cv2.contourArea(cnt) < max_contour_area)]
         frame_out = frame.copy()
         for cnt in large_contours:
