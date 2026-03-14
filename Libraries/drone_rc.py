@@ -11,7 +11,6 @@ which will lead to increased drift
 
 import socket
 
-if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("192.168.4.1", 8080))
 
@@ -45,7 +44,7 @@ def manual_thrusts(A, B, C, D):
 
 # same as prev function, but increments last value instead of overwriting
 def increment_thrusts(A, B, C, D):
-    msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+    msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
 
 def get_pitch(): # unit close-ish to degrees, but not exact
     return float(msg("angX")) / 16
