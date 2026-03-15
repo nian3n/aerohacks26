@@ -1,4 +1,4 @@
-from Libraries import drone_rc as rc
+import drone_rc as rc
 import time
 
 def emergency_stop():
@@ -8,9 +8,10 @@ def main():
     try:
         motor_power = 0
         while motor_power < 100:
-            motor_power = motor_power + 5
-            rc.increment_thrusts(motor_power, motor_power, motor_power, motor_power)
+            motor_power += 5
+            rc.manual_thrusts(motor_power, motor_power, motor_power, motor_power)
             time.sleep(1)
+            print(rc.get_pitch())
     except KeyboardInterrupt:
         print("Emergency Stop Initiated")
     finally:

@@ -9,13 +9,24 @@ which will lead to increased drift
 
 
 
-import socket
 
-if __name__ == "__main__":
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("192.168.4.1", 8080))
+
+import socket
+import select
+
+def empty_socket(sock):
+    input_ready, _, _ = select.select([sock], [], [], 0.0)
+    while input_ready:
+        data = sock.recv(1)
+        if not data:
+            break
+        input_ready, _, _ = select.select([sock], [], [], 0.0)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.4.1", 8080))
 
 def msg(tx):
+    empty_socket(s)
     s.sendall((tx + "\n").encode("ASCII"))
     rx = ""
     while not rx.endswith("\n"):
@@ -45,7 +56,7 @@ def manual_thrusts(A, B, C, D):
 
 # same as prev function, but increments last value instead of overwriting
 def increment_thrusts(A, B, C, D):
-    msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+    msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
 
 def get_pitch(): # unit close-ish to degrees, but not exact
     return float(msg("angX")) / 16
@@ -78,6 +89,15 @@ def set_i_gain(i): # below 0.00003
 def set_d_gain(d): # approx 0 - 10
     msg("gainD" + str(d))
 
+def red_LED(val): # controls LED light. 1 for on, 0 for off
+    msg("lr" + str(val))
+
+def blue_LED(val):
+    msg("lb" + str(val))
+
+def green_LED(val):
+    msg("lg" + str(val))
+
 def reset_integral(): # resets the value of integrands in the PID loops to 0
     msg("irst")
 
@@ -88,3 +108,26 @@ def get_i_values():
 
 def set_yaw(y): # directly sets motor difference for yaw control
     msg("yaw" + str(y))
+
+def get_firmware_version():
+    return msg("vers")
+
+
+
+
+
+
+
+
+# the following functions only work if firmware 1.2 or higher is installed on the drone
+# if you want to use this, please make sure by running msg("vers")
+
+# use at start of code if you want to use the drone outside of the cage. Overrides all mode changes
+def lock_props():
+    msg("lck")
+
+# recalibrates the gyroscope.
+# Do not communicate with the drone for 15 seconds after calling this
+def recalibrate():
+    msg("rst")
+

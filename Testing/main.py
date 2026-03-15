@@ -27,7 +27,6 @@ import time
 import threading
 import cv2
 import numpy as np
-import drone_rc as rc
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -36,11 +35,11 @@ import drone_rc as rc
 
 # PID attitude gains — from your Z-N auto-tune (apply_zn_gains printed these)
 ATTITUDE_KP = 0.02
-ATTITUDE_KI = 0.00001
-ATTITUDE_KD = 5.0
+ATTITUDE_KI = 0.00000
+ATTITUDE_KD = 3.0
 
 # Base thrust: increase by 5 until drone lifts, then back off 5
-BASE_THRUST  = 120
+BASE_THRUST  = 50
 
 # Position PID gains — controls how aggressively drone corrects to cage center
 # Start with just Kp_pos, keep Ki/Kd at 0 until Kp is stable
@@ -228,10 +227,11 @@ def phase_takeoff():
     print("[takeoff] Starting — mode 1, ramping thrust...")
     rc.set_mode(1)
 
-    steps = 20
+    steps = 200000
     for i in range(steps + 1):
         thrust = int(TAKEOFF_THRUST_START + (BASE_THRUST - TAKEOFF_THRUST_START) * i / steps)
         rc.manual_thrusts(thrust, thrust, thrust, thrust)
+        rc.set_yaw(25)
         time.sleep(TAKEOFF_RAMP_TIME / steps)
 
     print(f"[takeoff] Reached base thrust {BASE_THRUST} — handing off to mode 2")
@@ -311,13 +311,14 @@ def main():
     print("=" * 60)
 
     # Start camera thread first so background model is ready by takeoff
-    cam_thread = threading.Thread(target=camera_thread, daemon=True)
-    cam_thread.start()
+    # cam_thread = threading.Thread(target=camera_thread, daemon=True)
+    # cam_thread.start()
 
     # Wait for camera warmup to finish
     warmup_wait = (CAM_WARMUP_FRAMES / 30) + 1.0
     print(f"[main] Waiting {warmup_wait:.0f}s for camera warmup...")
     time.sleep(warmup_wait)
+    cam_running = True
 
     if not cam_running:
         print("[main] Camera failed — aborting")
@@ -326,14 +327,15 @@ def main():
     input("[main] Cameras ready. Place drone on launch pad, then press Enter to take off...")
 
     try:
+        rc.recalibrate()
         # Phase 1: Takeoff (mode 1)
         phase_takeoff()
-
+        print(rc.get_mode())
         # Brief pause to stabilize before handing off
         time.sleep(0.5)
 
         # Phase 2: Hover (mode 2, full 60s)
-        phase_hover(duration=60)
+        #phase_hover(duration=60)
 
         print("[main] Hover complete — landing")
 
